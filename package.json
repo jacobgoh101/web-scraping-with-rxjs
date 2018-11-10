@@ -1,0 +1,7 @@
+{
+  "name": "web-scraping-with-rxjs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Jacob Goh <you@example.com>",
+  "license": "MIT"
+}

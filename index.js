@@ -1,5 +1,13 @@
-const { BehaviorSubject, from } = require('rxjs');
-const { map, distinct, filter, mergeMap, share } = require('rxjs/operators');
+const { BehaviorSubject, from, of } = require('rxjs');
+const {
+  map,
+  distinct,
+  filter,
+  mergeMap,
+  retry,
+  catchError,
+  share
+} = require('rxjs/operators');
 const rp = require('request-promise-native');
 const normalizeUrl = require('normalize-url');
 const cheerio = require('cheerio');
@@ -8,6 +16,7 @@ const fs = require('fs');
 
 const baseUrl = `https://imdb.com`;
 const maxConcurrentReq = 10;
+const maxRetries = 5;
 
 const allUrl$ = new BehaviorSubject(baseUrl);
 
@@ -24,6 +33,15 @@ const urlAndDOM$ = uniqueUrl$.pipe(
   mergeMap(
     url => {
       return from(rp(url)).pipe(
+        retry(maxRetries),
+        catchError(error => {
+          const { uri } = error.options;
+          console.log(`Error requesting ${uri} after ${maxRetries} retries.`);
+          // return null on error
+          return of(null);
+        }),
+        // filter out errors
+        filter(v => v),
         // get the cheerio function $
         map(html => cheerio.load(html)),
         // add URL to the result. It will be used later for crawling

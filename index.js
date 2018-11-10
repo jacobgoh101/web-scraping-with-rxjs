@@ -7,6 +7,7 @@ const { resolve } = require('url');
 const fs = require('fs');
 
 const baseUrl = `https://imdb.com`;
+const maxConcurrentReq = 10;
 
 const allUrl$ = new BehaviorSubject(baseUrl);
 
@@ -20,17 +21,21 @@ const uniqueUrl$ = allUrl$.pipe(
 );
 
 const urlAndDOM$ = uniqueUrl$.pipe(
-  mergeMap(url => {
-    return from(rp(url)).pipe(
-      // get the cheerio function $
-      map(html => cheerio.load(html)),
-      // add URL to the result. It will be used later for crawling
-      map($ => ({
-        $,
-        url
-      }))
-    );
-  }),
+  mergeMap(
+    url => {
+      return from(rp(url)).pipe(
+        // get the cheerio function $
+        map(html => cheerio.load(html)),
+        // add URL to the result. It will be used later for crawling
+        map($ => ({
+          $,
+          url
+        }))
+      );
+    },
+    null,
+    maxConcurrentReq
+  ),
   share()
 );
 

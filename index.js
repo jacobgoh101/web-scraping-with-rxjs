@@ -1,4 +1,4 @@
-const { BehaviorSubject, from, of } = require('rxjs');
+const { BehaviorSubject, from, of, timer } = require('rxjs');
 const {
   map,
   distinct,
@@ -6,7 +6,9 @@ const {
   mergeMap,
   retry,
   catchError,
-  share
+  share,
+  retryWhen,
+  finalize
 } = require('rxjs/operators');
 const rp = require('request-promise-native');
 const normalizeUrl = require('normalize-url');
@@ -17,6 +19,33 @@ const fs = require('fs');
 const baseUrl = `https://imdb.com`;
 const maxConcurrentReq = 10;
 const maxRetries = 5;
+
+const genericRetryStrategy = ({
+  maxRetryAttempts,
+  scalingDuration,
+  excludedStatusCodes
+}) => attempts => {
+  return attempts.pipe(
+    mergeMap((error, i) => {
+      const retryAttempt = i + 1;
+      // if maximum number of retries have been met
+      // or response is a status code we don't wish to retry, throw error
+      if (
+        retryAttempt > maxRetryAttempts ||
+        excludedStatusCodes.find(e => e === error.status)
+      ) {
+        return throwError(error);
+      }
+      console.log(
+        `Attempt ${retryAttempt}: retrying in ${retryAttempt *
+          scalingDuration}ms`
+      );
+      // retry after 1s, 2s, etc...
+      return timer(retryAttempt * scalingDuration);
+    }),
+    finalize(() => console.log('We are done!'))
+  );
+};
 
 const allUrl$ = new BehaviorSubject(baseUrl);
 
@@ -33,7 +62,13 @@ const urlAndDOM$ = uniqueUrl$.pipe(
   mergeMap(
     url => {
       return from(rp(url)).pipe(
-        retry(maxRetries),
+        retryWhen(
+          genericRetryStrategy({
+            maxRetryAttempts: maxRetries,
+            scalingDuration: 3000,
+            excludedStatusCodes: []
+          })
+        ),
         catchError(error => {
           const { uri } = error.options;
           console.log(`Error requesting ${uri} after ${maxRetries} retries.`);

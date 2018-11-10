@@ -2,6 +2,13 @@
   "name": "web-scraping-with-rxjs",
   "version": "1.0.0",
   "main": "index.js",
-  "author": "Jacob Goh <you@example.com>",
-  "license": "MIT"
+  "author": "Jacob Goh <jacobgoh101@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "normalize-url": "^4.0.0",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.5",
+    "rxjs": "^6.3.3"
+  }
 }
